@@ -1,0 +1,95 @@
+
+
+## create the hg38 reference db needed for gffutils
+
+# 1. download Refseq annotation latest:
+wget ftp://ftp.ncbi.nlm.nih.gov/refseq/H_sapiens/annotation/GRCh38_latest/refseq_identifiers/GRCh38_latest_genomic.gff.gz
+
+
+# 2. add UTR information to the GFF file
+python3 add_utrs_to_gff.py GRCh38_latest_genomic.gff.gz > GRCh38_GCF_000001405.40-RS_2023_10_genomic_UTR-Added.gff
+
+# 3. subset only gene, mRNA, and UTRs on the primary assembly to reduce DB size; ("transcript" refers to "misc_RNA" in the GenBank feature type which means transcript without other RNA feature annotations)
+awk 'BEGIN{FS="\t"; OFS="\t"} ($3 ~ /.*prime_UTR$/ || $3 == "gene" || $3 == "mRNA") && ($1 ~ /^NC_.*/) {print $0}' GRCh38_GCF_000001405.40-RS_2023_10_genomic_UTR-Added.gff > GRCh38_GCF_000001405.40-RS_2023_10_Prim_gene_mRNA_UTR.gff 
+
+
+# 4. NCBI chromosome name to UCSC name conversion: https://github.com/dpryan79/ChromosomeMappings
+GRCh38_RefSeq2UCSC.txt 
+About 30 alt_patches do not match so only primary assembly annotations are used
+
+cvbio UpdateContigNames \
+    -i GRCh38_GCF_000001405.40-RS_2023_10_Prim_gene_mRNA_UTR.gff \
+    -o GRCh38_GCF_000001405.40-RS_2023_10_Prim_gene_mRNA_UTR.gff_chrName_UCSC.gff \
+    -m GRCh38_RefSeq2UCSC.txt \
+    --comment-chars '#' \
+    --columns 0 \
+    --skip-missing false
+   # note openjdk needs to be v11 and below
+   
+# 5. create database with gffutils; documentation:https://daler.github.io/gffutils/examples.html#ncbi-gff3-txt
+import gffutils
+db = gffutils.create_db("GRCh38_GCF_000001405.40-RS_2023_10_Prim_gene_mRNA_UTR.gff_chrName_UCSC.gff", "GRCh38_GCF_000001405.40-RS_2023_10_Prim_gene_mRNA_UTR_chrName_UCSC.db", id_spec="ID", keep_order=True, sort_attribute_values=True, merge_strategy="merge")
+
+
+## add a function to ~/.bashrc as a shortcut for an interactive session 
+
+qsubi(){
+    # arg1: the number of hours requested (defaults to 2)
+    # arg2: the partition (defaults to hotel)
+    srun -A htl189 --pty --nodes=1 --ntasks 1 --cpus-per-task=2 -t ${1:-2}:00:00 --wait=0 --partition=${2:-hotel} --qos=${2:-hotel} --export=ALL /bin/bash
+}
+
+Alternatively, one can just use the following command to request an interactive session for 30min
+
+srun --partition=hotel --pty --nodes=1 --ntasks-per-node=1 -t 00:30:00 -A htl189 --qos=hotel --wait=0 --export=ALL --mem=8G /bin/bash
+
+##
+
+
+
+# scratch space: /tscc/lustre/ddn/scratch/yzhu
+
+# installed lastest R with conda
+# installed the latest bioconductor
+# installed seqtk from source
+# installed blast 2.16 from NCBI
+# downloaded blast human genome DB: update_blastdb.pl --decompress --source=ncbi human_genome
+
+module load cpu/0.17.3
+
+# monitor job details
+scancel <id>
+scontrol show job <id>
+sacct --format=Elapsed -j <id>
+
+# show job resource usage:  seff <jid>
+
+# submit batch job
+sbatch <job file>
+
+# run main script to find insertions:
+
+See example in /tscc/nfs/home/yzhu/projects/gencDNA/analysis_1111/sbatch_700.slurm
+
+
+# post batch job processing
+SCRIPTS=/tscc/nfs/home/yzhu/projects/gencDNA/scripts
+cd /tscc/lustre/ddn/scratch/yzhu/gencDNA_0924/analysis_1111
+
+# grep 'completed' */progress.track | sed 's/\(^.*.bam\).*/ \1/g' | sort -u > completed_jobs.txt # confirming that all the 3646 samples are finished
+mkdir -p combined_res
+mkdir -p combined_res_lowQ
+
+# combine high quality hits
+parallel "find {}/ -type f -name "*_blast_vs_sam.highQual.raw"  | xargs -I '{}' cp -u '{}' combined_res" ::: 700 1400 2100 2800 3646
+Rscript $SCRIPTS/Summarize_blastXsam_tables.R -i combined_res -o combined_res/combined_res_Nov2024.txt
+
+
+# combine low quality hits where the mate reads are unmapped or >5% mismatch or gencDNA reinserted to the parent loci ## the code is currently broken
+parallel "find {}/ -type f -name "*blast_vs_sam.lowQual.raw"  | xargs -I '{}' cp -u '{}' combined_res_lowQ" ::: 700 1400 2100 2800 3646
+Rscript $SCRIPTS/Summarize_blastXsam_tables.R -i combined_res_lowQ -o combined_res_lowQ/combined_res_lowQ_Nov2024.txt
+
+
+## now take the raw results "combined_res_Nov2024.txt" to the interactive script "filter_insertions_10122024.R"
+
+

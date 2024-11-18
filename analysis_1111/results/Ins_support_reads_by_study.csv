@@ -1,0 +1,12 @@
+study,num_samples,num_ins_support_reads,avg_ins_read_per_sam
+Tombacz2017_ScientificReports,44,33,0.75
+Wang2018_ScientificData,359,503,1.4
+Erwin2016_NatNeuro,3,15,5
+SanchezLuque2019_SingleCell,36,280,7.78
+Upton2015_Cell,175,6,0.03
+Evrony2015_Neuron,19,581,30.58
+Li2014_molsysbio,19,15,0.79
+Lodato2015_Science,22,269,12.23
+NABEC_exome,492,415,0.84
+Park2019_Exome,111,376,3.39
+Exome_AutismEpilepsy,23,21,0.91

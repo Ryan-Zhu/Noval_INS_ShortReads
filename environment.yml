@@ -1,0 +1,36 @@
+name: base
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.12
+  - conda==24.9.1
+  - setuptools
+  - pip
+  - wheel
+  - conda-content-trust
+  - conda-libmamba-solver
+  - menuinst
+  - anaconda-anon-usage
+  - mamba
+  - samtools
+  - ca-certificates
+  - certifi
+  - openssl
+  - conda-forge::parallel
+  - conda-forge::tmux
+  - bioconda::cvbio
+  - bioconda::gffutils
+  - bioconda::pysam
+  - openjdk=11.0
+  - bioconda::bedtools
+  - bioconda::pybedtools
+  - conda-forge::joblib
+  - conda-forge::pandas
+  - conda-forge::r-devtools
+  - conda-forge::r-ggplot2
+  - conda-forge::r-desctools
+  - conda-forge::libsqlite
+  - conda-forge::r-valr
+prefix: /tscc/nfs/home/yzhu/miniconda3

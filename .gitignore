@@ -1,0 +1,5 @@
+__pycache__/
+analysis_09*/
+*.gff
+*.db
+combined_res_lowQ/
